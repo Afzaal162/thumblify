@@ -39,7 +39,7 @@ app.use(session({
 // Routes
 app.use('/api/auth', AuthRouter);
 app.use('/api/thumbnail', ThumbnailRouter);
-app.get("/hello", (req, res) => {
+app.get("/", (req, res) => {
   res.send("Hello from backend!");
 });
 const port = process.env.PORT || 3000;
