@@ -16,7 +16,7 @@ app.use(express.json());
 
 // 2️⃣ CORS config for frontend
 app.use(cors({
-  origin: "http://localhost:5173", // React dev server
+  origin: "http://localhost:5173", "https://thumblify-frontend-pi.vercel.app" // React dev server
   credentials: true                // allow cookies
 }));
 
