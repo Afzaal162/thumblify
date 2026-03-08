@@ -17,23 +17,33 @@ app.use(express.json());
 // 2️⃣ Allowed frontend origins
 const allowedOrigins = [
   "https://thumblify-frontend-pi.vercel.app",
-  "http://localhost:5173" // for local dev
+  "http://localhost:5173" // local dev
 ];
 
-// 3️⃣ CORS middleware – applied first
+// 3️⃣ CORS middleware applied globally
 app.use(cors({
   origin: function(origin, callback) {
-    if (!origin) return callback(null, true); // Postman / server-to-server
+    if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
     return callback(new Error("Not allowed by CORS"));
   },
-  credentials: true
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-// 4️⃣ Trust proxy (critical for secure cookies on Vercel)
+// 4️⃣ Handle preflight OPTIONS requests for all routes
+app.options("*", cors({
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
+// 5️⃣ Trust proxy (critical for secure cookies on Vercel HTTPS)
 app.set('trust proxy', 1);
 
-// 5️⃣ Session middleware
+// 6️⃣ Session middleware
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
@@ -45,27 +55,29 @@ app.use(session({
   cookie: {
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
     sameSite: "none",                // cross-origin cookies
-    secure: true                     // required for HTTPS
+    secure: true                     // required on HTTPS
   }
 }));
 
-// 6️⃣ Routes
+// 7️⃣ Routes
 app.use("/api/auth", AuthRouter);
 app.use("/api/thumbnail", ThumbnailRouter);
 
-// 7️⃣ Test route
+// 8️⃣ Test route
 app.get("/", (req, res) => res.send("Hello from backend!"));
 
-// 8️⃣ Catch-all error handler (ensures CORS headers on errors)
+// 9️⃣ Catch-all error handler (ensures CORS headers even on 401 or errors)
 app.use((err, req, res, next) => {
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
     res.header("Access-Control-Allow-Origin", origin);
     res.header("Access-Control-Allow-Credentials", "true");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
   }
   res.status(err.status || 500).json({ message: err.message });
 });
 
-// 9️⃣ Start server
+// 10️⃣ Start server
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`Server running on port ${port}`));
