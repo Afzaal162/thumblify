@@ -1,78 +1,47 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import toast from "react-hot-toast";
-import api from "../configs/api";
-import type { IUser } from "../assets/assets";
+import React, { createContext, useContext, useState, ReactNode } from "react";
+import axios from "axios";
 
-interface AuthContextProvider {
-  isLoggedIn: boolean;
-  setIsLoggedIn: (v: boolean) => void;
-  user: IUser | null;
-  setUser: (user: IUser | null) => void;
-  login: (data: { email: string; password: string }) => Promise<void>;
-  signUp: (data: { name: string; email: string; password: string }) => Promise<void>;
+// Axios instance with credentials
+const api = axios.create({
+  baseURL: "https://thumblify-server-44llwvl11-afzaal-hassans-projects.vercel.app",
+  withCredentials: true // ⚠️ critical for cookies
+});
+
+interface AuthContextType {
+  user: any;
+  setUser: (user: any) => void;
+  login: (data: { email: string; password: string }) => Promise<any>;
+  signUp: (data: { name: string; email: string; password: string }) => Promise<any>;
   logout: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextProvider>({} as AuthContextProvider);
+const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<IUser | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+export const useAuth = () => useContext(AuthContext);
+
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<any>(null);
 
   const login = async ({ email, password }: { email: string; password: string }) => {
-    try {
-      const { data } = await api.post("/api/auth/login", { email, password });
-      setUser(data.user);
-      setIsLoggedIn(true);
-      toast.success(data.message);
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || "Login failed");
-    }
+    const res = await api.post("/api/auth/login", { email, password });
+    setUser(res.data.user); // store user info in context
+    return res.data.user;
   };
 
   const signUp = async ({ name, email, password }: { name: string; email: string; password: string }) => {
-    try {
-      const { data } = await api.post("/api/auth/register", { name, email, password });
-      setUser(data.user);
-      setIsLoggedIn(true);
-      toast.success(data.message);
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || "Sign up failed");
-    }
+    const res = await api.post("/api/auth/register", { name, email, password });
+    setUser(res.data.user);
+    return res.data.user;
   };
 
   const logout = async () => {
-    try {
-      const { data } = await api.post("/api/auth/logout");
-      setUser(null);
-      setIsLoggedIn(false);
-      toast.success(data.message);
-    } catch (err) {
-      toast.error("Logout failed");
-    }
+    await api.post("/api/auth/logout");
+    setUser(null);
   };
-
-  const fetchUser = async () => {
-    try {
-      const { data } = await api.get("/api/auth/verify");
-      setUser(data.user);
-      setIsLoggedIn(true);
-    } catch (err) {
-      setUser(null);
-      setIsLoggedIn(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchUser();
-  }, []);
 
   return (
-    <AuthContext.Provider value={{ user, setUser, isLoggedIn, setIsLoggedIn, login, signUp, logout }}>
+    <AuthContext.Provider value={{ user, setUser, login, signUp, logout }}>
       {children}
     </AuthContext.Provider>
   );
 };
-
-// ✅ HMR-safe named export
-export const useAuth = () => useContext(AuthContext);
