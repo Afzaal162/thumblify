@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_BASE_URL,
+  baseURL: "https://thumblify-server-44llwvl11-afzaal-hassans-projects.vercel.app",
   withCredentials: true
 });
 
