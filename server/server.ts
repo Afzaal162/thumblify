@@ -15,28 +15,31 @@ app.use(express.json());
 /* ---------------- CORS ---------------- */
 const allowedOrigins = [
   "https://thumblify-frontend-pi.vercel.app",
-  "http://localhost:5173" // local dev
+  "http://localhost:5173"
 ];
 
 app.use(cors({
-  origin: function(origin, callback) {
-    // allow non-browser requests like Postman
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // allow Postman/server requests
+    if (allowedOrigins.includes(origin)) return callback(null, true); // allow listed origins
     return callback(new Error("Not allowed by CORS"));
   },
   credentials: true, // allow cookies
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+  methods: ["GET","POST","PUT","DELETE","OPTIONS"],
+  allowedHeaders: ["Content-Type","Authorization"]
 }));
 
-// Handle preflight requests for all routes
-app.options("*", cors({
-  origin: allowedOrigins,
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
+// Dynamic preflight handler for all routes
+app.options("*", (req, res) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type,Authorization");
+  }
+  res.sendStatus(200);
+});
 
 /* ------------- TRUST PROXY ------------- */
 app.set("trust proxy", 1); // required for secure cookies on Vercel
@@ -49,7 +52,7 @@ app.use(session({
   store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI }),
   cookie: {
     httpOnly: true,
-    secure: true,     // must be HTTPS
+    secure: true,     // required for HTTPS
     sameSite: "none", // cross-origin cookie
     maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
   }
@@ -63,6 +66,13 @@ app.get("/", (req, res) => res.send("Backend running"));
 
 /* ------------ ERROR HANDLER ------------ */
 app.use((err, req, res, next) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type,Authorization");
+  }
   res.status(err.status || 500).json({ message: err.message });
 });
 
