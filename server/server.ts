@@ -11,73 +11,57 @@ await connectDB();
 
 const app = express();
 
-// 1️⃣ JSON parser
 app.use(express.json());
 
-// 2️⃣ Allowed frontend origins
-const allowedOrigins = [
-  "https://thumblify-frontend-pi.vercel.app",
-  "http://localhost:5173" // local dev
-];
+/* ---------------- CORS ---------------- */
 
-// 3️⃣ CORS middleware applied globally
 app.use(cors({
-  origin: function(origin, callback) {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error("Not allowed by CORS"));
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+  origin: true, // allows any requesting origin
+  credentials: true
 }));
 
-// 4️⃣ Handle preflight OPTIONS requests for all routes
-app.options("*", cors({
-  origin: allowedOrigins,
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
+/* ------------- TRUST PROXY ------------- */
 
-// 5️⃣ Trust proxy (critical for secure cookies on Vercel HTTPS)
-app.set('trust proxy', 1);
+app.set("trust proxy", 1);
 
-// 6️⃣ Session middleware
+/* ------------- SESSION SETUP ----------- */
+
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   store: MongoStore.create({
-    mongoUrl: process.env.MONGODB_URI,
-    collectionName: "sessions"
+    mongoUrl: process.env.MONGODB_URI
   }),
   cookie: {
-    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-    sameSite: "none",                // cross-origin cookies
-    secure: true                     // required on HTTPS
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
+    maxAge: 1000 * 60 * 60 * 24 * 7
   }
 }));
 
-// 7️⃣ Routes
+/* --------------- ROUTES ---------------- */
+
 app.use("/api/auth", AuthRouter);
 app.use("/api/thumbnail", ThumbnailRouter);
 
-// 8️⃣ Test route
-app.get("/", (req, res) => res.send("Hello from backend!"));
-
-// 9️⃣ Catch-all error handler (ensures CORS headers even on 401 or errors)
-app.use((err, req, res, next) => {
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.header("Access-Control-Allow-Origin", origin);
-    res.header("Access-Control-Allow-Credentials", "true");
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  }
-  res.status(err.status || 500).json({ message: err.message });
+app.get("/", (req, res) => {
+  res.send("Backend running");
 });
 
-// 10️⃣ Start server
+/* ------------ ERROR HANDLER ------------ */
+
+app.use((err, req, res, next) => {
+  res.status(err.status || 500).json({
+    message: err.message
+  });
+});
+
+/* -------------- SERVER ---------------- */
+
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`Server running on port ${port}`));
+
+app.listen(port, () => {
+  console.log("Server running");
+});
