@@ -15,9 +15,22 @@ const app = express();
 app.use(express.json());
 
 // 2️⃣ CORS config for frontend
+const allowedOrigins = [
+  "http://localhost:5173", // React dev server
+  "https://thumblify-frontend-pi.vercel.app" // Deployed frontend
+];
+
 app.use(cors({
-  origin: "http://localhost:5173", "https://thumblify-frontend-pi.vercel.app" // React dev server
-  credentials: true                // allow cookies
+  origin: function(origin, callback) {
+    // allow requests with no origin (like Postman or curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = `CORS policy: The origin ${origin} is not allowed`;
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true
 }));
 
 // 3️⃣ Session config
