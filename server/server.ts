@@ -12,58 +12,41 @@ await connectDB();
 
 const app = express();
 
-/* ---------------- MIDDLEWARE ---------------- */
-
 app.use(express.json());
 
 /* ---------------- CORS ---------------- */
 
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://thumblify-frontend-pi.vercel.app"
-];
-
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      return callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true
-  })
-);
+app.use(cors({
+  origin: [
+    "http://localhost:5173",
+    "https://thumblify-frontend-pi.vercel.app"
+  ],
+  credentials: true
+}));
 
 /* ------------- TRUST PROXY ------------- */
 
 app.set("trust proxy", 1);
 
-/* ------------- SESSION SETUP ----------- */
+/* ------------- SESSION ----------------- */
 
-app.use(
-  session({
-    name: "thumblify.sid",
-    secret: process.env.SESSION_SECRET as string,
-    resave: false,
-    saveUninitialized: false,
+app.use(session({
+  name: "thumblify.sid",
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
 
-    store: MongoStore.create({
-      mongoUrl: process.env.MONGODB_URI,
-      collectionName: "sessions"
-    }),
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGODB_URI
+  }),
 
-    cookie: {
-      httpOnly: true,
-      secure: true,      // required for HTTPS (Vercel)
-      sameSite: "none",  // allow cross-origin cookies
-      maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
-    }
-  })
-);
+  cookie: {
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
+    maxAge: 1000 * 60 * 60 * 24 * 7
+  }
+}));
 
 /* ---------------- ROUTES ---------------- */
 
@@ -71,17 +54,16 @@ app.use("/api/auth", AuthRouter);
 app.use("/api/thumbnail", ThumbnailRouter);
 
 app.get("/", (req, res) => {
-  res.send("Thumblify backend running");
+  res.send("Backend running");
 });
 
 /* ------------ ERROR HANDLER ------------ */
 
-app.use((err: any, req: any, res: any, next: any) => {
+app.use((err, req, res, next) => {
   console.error(err);
-
-  res.status(err.status || 500).json({
+  res.status(500).json({
     success: false,
-    message: err.message || "Server Error"
+    message: err.message
   });
 });
 
@@ -90,5 +72,5 @@ app.use((err: any, req: any, res: any, next: any) => {
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
