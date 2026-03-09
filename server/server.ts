@@ -15,30 +15,46 @@ app.use(express.json());
 
 /* ---------------- CORS ---------------- */
 const allowedOrigins = [
-  "https://thumblify-frontend-pi.vercel.app",
-  "http://localhost:5173"
+  "https://thumblify-frontend-pi.vercel.app", // Production frontend
+  "http://localhost:5173"                     // Local dev frontend
 ];
 
 app.use(cors({
-  origin: allowedOrigins,
-  credentials: true,
-  methods: ["GET","POST","PUT","DELETE","OPTIONS"],
-  allowedHeaders: ["Content-Type","Authorization"]
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // allow Postman / curl
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true, // allow cookies
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
+// Handle preflight OPTIONS requests dynamically
+app.options("*", (req, res) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type,Authorization");
+  }
+  res.sendStatus(200);
+});
+
 /* ------------- TRUST PROXY ------------- */
-app.set("trust proxy", 1); // Required for secure cookies on Vercel
+app.set("trust proxy", 1); // required for secure cookies on Vercel
 
 /* ------------- SESSION ----------------- */
 app.use(session({
-  name: "thumblify.sid",
-  secret: process.env.SESSION_SECRET,
+  name: "thumblify.sid",               // session cookie name
+  secret: process.env.SESSION_SECRET,  // secret from .env
   resave: false,
   saveUninitialized: false,
   store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI }),
   cookie: {
     httpOnly: true,
-    secure: true,     // HTTPS required
+    secure: true,     // must be true on HTTPS
     sameSite: "none", // cross-origin cookie
     maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
   }
