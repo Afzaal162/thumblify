@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-export interface ITumbnail extends Document {
+export interface IThumbnail extends Document {
     userId: string;
     title: string;
     description?: string;
