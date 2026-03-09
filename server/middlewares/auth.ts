@@ -1,5 +1,12 @@
-const protect = (req, res, next) => {
+import { Request, Response, NextFunction } from "express";
 
+// You can also extend the session type if using express-session
+interface SessionData {
+  isLoggedIn?: boolean;
+  userId?: string;
+}
+
+const protect = (req: Request & { session: SessionData }, res: Response, next: NextFunction) => {
   const { isLoggedIn, userId } = req.session;
 
   if (!isLoggedIn || !userId) {
