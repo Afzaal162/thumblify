@@ -8,6 +8,7 @@ import connectDB from "./config/db.js";
 import AuthRouter from "./routes/AuthRoutes.js";
 import ThumbnailRouter from "./routes/ThumbnailRoutes.js";
 
+// Connect to MongoDB
 await connectDB();
 
 const app = express();
@@ -20,19 +21,20 @@ const allowedOrigins = [
 ];
 
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true); // allow Postman / curl
+  origin: function (origin, callback) {
+    // allow requests with no origin (like Postman or server-to-server)
+    if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error("Not allowed by CORS"));
+    return callback(new Error("CORS policy: Origin not allowed"));
   },
-  credentials: true, // allow cookies
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+  credentials: true,
+  methods: ["GET","POST","PUT","DELETE","OPTIONS"],
+  allowedHeaders: ["Content-Type","Authorization"]
 }));
 
 // Handle preflight OPTIONS requests dynamically
 app.options("*", (req, res) => {
-  const origin = req.headers.origin;
+  const origin = req.headers.origin as string;
   if (allowedOrigins.includes(origin)) {
     res.header("Access-Control-Allow-Origin", origin);
     res.header("Access-Control-Allow-Credentials", "true");
@@ -43,12 +45,12 @@ app.options("*", (req, res) => {
 });
 
 /* ------------- TRUST PROXY ------------- */
-app.set("trust proxy", 1); // required for secure cookies on Vercel
+app.set("trust proxy", 1); // Required for secure cookies on Vercel
 
 /* ------------- SESSION ----------------- */
 app.use(session({
-  name: "thumblify.sid",               // session cookie name
-  secret: process.env.SESSION_SECRET,  // secret from .env
+  name: "thumblify.sid",               // Session cookie name
+  secret: process.env.SESSION_SECRET,  // Secret from .env
   resave: false,
   saveUninitialized: false,
   store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI }),
@@ -67,7 +69,7 @@ app.use("/api/thumbnail", ThumbnailRouter);
 app.get("/", (req, res) => res.send("Backend running"));
 
 /* ------------ ERROR HANDLER ------------ */
-app.use((err, req, res, next) => {
+app.use((err: any, req: any, res: any, next: any) => {
   console.error(err);
   res.status(err.status || 500).json({ message: err.message });
 });
