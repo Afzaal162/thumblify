@@ -4,7 +4,7 @@ import cors from "cors";
 import session from "express-session";
 import MongoStore from "connect-mongo";
 
-import connectDB from "./config/db.js";
+import connectDB from "../config/db.js";
 import AuthRouter from "./routes/AuthRoutes.js";
 import ThumbnailRouter from "./routes/ThumbnailRoutes.js";
 
