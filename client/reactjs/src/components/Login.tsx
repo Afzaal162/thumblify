@@ -9,16 +9,18 @@ const Login = () => {
 
   const [formData, setFormData] = useState({ name: "", email: "", password: "" });
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState(""); // ✅ for showing login/signup success
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user) navigate("/");
+    if (user) navigate("/"); // will navigate only if user exists
   }, [user, navigate]);
 
   // Reset form when switching between login and register
   useEffect(() => {
     setFormData({ name: "", email: "", password: "" });
     setError("");
+    setSuccess("");
   }, [state]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -29,16 +31,19 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(""); // clear previous error
+    setSuccess(""); // clear previous success
     try {
       if (state === "login") {
         const loggedInUser = await login(formData);
-        if (loggedInUser) navigate("/"); // login successful
+        setSuccess(`Logged in as ${loggedInUser.name}`); // ✅ show success
+        setTimeout(() => navigate("/"), 800); // slight delay to show alert
       } else {
         const registeredUser = await signUp(formData);
-        if (registeredUser) navigate("/"); // signup successful
+        setSuccess(`Registered as ${registeredUser.name}`); // ✅ show success
+        setTimeout(() => navigate("/"), 800);
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || "Something went wrong");
+      setError(err.response?.data?.message || err.message || "Something went wrong");
       console.error("Auth error:", err);
     }
   };
@@ -88,6 +93,7 @@ const Login = () => {
         />
 
         {error && <p className="text-red-500 mt-2">{error}</p>}
+        {success && <p className="text-green-400 mt-2">{success}</p>} {/* ✅ show success */}
 
         <button
           type="submit"
