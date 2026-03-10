@@ -10,8 +10,10 @@ import ThumbnailRouter from "./routes/ThumbnailRoutes.js";
 
 const app = express();
 
+// Connect MongoDB
 connectDB().catch(console.error);
 
+// Middleware
 app.use(express.json());
 
 app.use(cors({
@@ -24,12 +26,10 @@ app.use(cors({
 
 app.use(session({
   name: "thumblify.sid",
-  secret: process.env.SESSION_SECRET as string,
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  store: MongoStore.create({
-    mongoUrl: process.env.MONGODB_URI as string
-  }),
+  store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI }),
   cookie: {
     httpOnly: true,
     secure: true,
@@ -38,9 +38,11 @@ app.use(session({
   }
 }));
 
+// Routes
 app.use("/api/auth", AuthRouter);
 app.use("/api/thumbnail", ThumbnailRouter);
 
+// Health check
 app.get("/", (req, res) => res.send("Backend running"));
 
 export default app;
