@@ -4,8 +4,8 @@ import {
   loginUser,
   logoutUser,
   verifyUser
-} from "../controllers/AuthController.js";
-import protect from "../middlewares/protect.js";
+} from "../controllers/AuthControllers.js";
+import protect from "../middlewares/auth.js";
 
 const router = express.Router();
 
