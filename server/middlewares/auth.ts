@@ -1,10 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 
 const protect = (req: Request, res: Response, next: NextFunction) => {
-  const session = req.session as any; // cast to any for custom properties
+  const session = req.session as any;
 
-  if (!session.isLoggedIn || !session.userId) {
-    return res.status(401).json({ message: "You are not logged in" });
+  if (!session || !session.user) {
+    return res.status(401).json({ message: "Not Authenticated" });
   }
 
   next();
