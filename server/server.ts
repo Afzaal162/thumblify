@@ -10,25 +10,33 @@ import ThumbnailRouter from "./routes/ThumbnailRoutes.js";
 
 const app = express();
 
-// Connect MongoDB
+// --------------------
+// 1️⃣ Connect MongoDB
+// --------------------
 connectDB().catch(console.error);
 
-// Middleware
+// --------------------
+// 2️⃣ CORS Middleware
+// Must be before session and routes
+// --------------------
+app.use(cors({
+  origin: "https://thumblify-frontend-pi.vercel.app", // exact frontend URL
+  credentials: true,                                   // allow cookies
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
+// Handle preflight requests globally
+app.options("*", cors());
+
+// --------------------
+// 3️⃣ Body parser
+// --------------------
 app.use(express.json());
 
-// CORS setup
-app.use(cors({
-  origin: "https://thumblify-frontend-pi.vercel.app", // frontend domain
-  credentials: true // allow cookies
-}));
-
-// Allow preflight requests for all routes
-app.options("*", cors({
-  origin: "https://thumblify-frontend-pi.vercel.app",
-  credentials: true
-}));
-
-// Session setup
+// --------------------
+// 4️⃣ Session setup
+// --------------------
 app.use(session({
   name: "thumblify.sid",
   secret: process.env.SESSION_SECRET,
@@ -37,17 +45,21 @@ app.use(session({
   store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI }),
   cookie: {
     httpOnly: true,
-    secure: true,       // must be true for HTTPS
-    sameSite: "none",   // cross-domain cookies
-    maxAge: 1000 * 60 * 60 * 24 * 7
+    secure: true,         // ⚠️ must be HTTPS (Vercel production is HTTPS)
+    sameSite: "none",     // allows cross-site cookies
+    maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
   }
 }));
 
-// Routes
+// --------------------
+// 5️⃣ Routes
+// --------------------
 app.use("/api/auth", AuthRouter);
 app.use("/api/thumbnail", ThumbnailRouter);
 
-// Health check
+// --------------------
+// 6️⃣ Health check
+// --------------------
 app.get("/", (req, res) => res.send("Backend running"));
 
 export default app;
