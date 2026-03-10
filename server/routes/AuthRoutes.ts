@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { registerUser, loginUser, logoutUser, verifyUser } from "../controllers/authController.js";
 
-const router = Router();
+const AuthRoute = Router();
 
 // ===================== AUTH ROUTES =====================
 
@@ -17,4 +17,4 @@ router.post("/logout", logoutUser);
 // Verify user session
 router.get("/verify", verifyUser);
 
-export default router;
+export default AuthRoute;
