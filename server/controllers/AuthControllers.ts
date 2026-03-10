@@ -1,11 +1,12 @@
-import { Request, Response } from 'express';
-import User from '../models/User.js';
-import bcrypt from 'bcrypt';
+import { Request, Response } from "express";
+import User from "../models/User.js";
+import bcrypt from "bcrypt";
 
-// REGISTER
+// ===================== REGISTER =====================
 export const registerUser = async (req: Request, res: Response) => {
-  const { name, email, password } = req.body;
   try {
+    const { name, email, password } = req.body;
+
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ message: "User Already Exists" });
 
@@ -14,57 +15,74 @@ export const registerUser = async (req: Request, res: Response) => {
     const newUser = new User({ name, email, password: hashedPassword });
     await newUser.save();
 
-    req.session.isLoggedIn = true;
-    req.session.userId = newUser._id;
+    // ⚠️ cast session to any
+    const session = req.session as any;
+    session.isLoggedIn = true;
+    session.userId = newUser._id.toString();
 
-    res.status(201).json({ message: "Registered & Logged In", user: { _id: newUser._id, name, email }});
+    return res.status(201).json({
+      message: "Account Registered & Logged In Successfully",
+      user: { _id: newUser._id, name: newUser.name, email: newUser.email },
+    });
   } catch (error: any) {
-    console.log(error);
-    res.status(500).json({ message: error.message });
+    console.error(error);
+    return res.status(500).json({ message: error.message });
   }
 };
 
-// LOGIN
+// ===================== LOGIN =====================
 export const loginUser = async (req: Request, res: Response) => {
-  const { email, password } = req.body;
   try {
+    const { email, password } = req.body;
     const user = await User.findOne({ email });
     if (!user) return res.status(401).json({ message: "Invalid Email or Password" });
 
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) return res.status(401).json({ message: "Invalid Email or Password" });
 
-    req.session.isLoggedIn = true;
-    req.session.userId = user._id;
+    const session = req.session as any;
+    session.isLoggedIn = true;
+    session.userId = user._id.toString();
 
-    res.json({ message: "Logged In", user: { _id: user._id, name: user.name, email } });
+    return res.json({
+      message: "Account Logged In Successfully",
+      user: { _id: user._id, name: user.name, email: user.email },
+    });
   } catch (error: any) {
-    console.log(error);
-    res.status(500).json({ message: error.message });
+    console.error(error);
+    return res.status(500).json({ message: error.message });
   }
 };
 
-// LOGOUT
-export const logoutUser = (req: Request, res: Response) => {
-  req.session.destroy((err: any) => {
-    if (err) return res.status(500).json({ message: err.message });
-    res.clearCookie('connect.sid');
-    res.json({ message: "Logout Successful" });
-  });
+// ===================== LOGOUT =====================
+export const logoutUser = async (req: Request, res: Response) => {
+  try {
+    req.session.destroy((err: any) => {
+      if (err) return res.status(500).json({ message: err.message });
+
+      res.clearCookie("connect.sid");
+      return res.json({ message: "Logout Successful" });
+    });
+  } catch (error: any) {
+    console.error(error);
+    return res.status(500).json({ message: error.message });
+  }
 };
 
-// VERIFY
+// ===================== VERIFY USER =====================
 export const verifyUser = async (req: Request, res: Response) => {
-  const userId = req.session.userId;
-  if (!userId) return res.status(401).json({ message: "Not Authenticated" });
-
   try {
-    const user = await User.findById(userId).select('-password');
+    const session = req.session as any;
+    const userId = session.userId;
+
+    if (!userId) return res.status(401).json({ message: "Not Authenticated" });
+
+    const user = await User.findById(userId).select("-password");
     if (!user) return res.status(401).json({ message: "Invalid User" });
 
-    res.json({ user });
+    return res.json({ user });
   } catch (error: any) {
-    console.log(error);
-    res.status(500).json({ message: error.message });
+    console.error(error);
+    return res.status(500).json({ message: error.message });
   }
 };
