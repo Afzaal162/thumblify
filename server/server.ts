@@ -10,56 +10,43 @@ import ThumbnailRouter from "./routes/ThumbnailRoutes.js";
 
 const app = express();
 
-// --------------------
-// 1️⃣ Connect MongoDB
-// --------------------
+// Connect MongoDB
 connectDB().catch(console.error);
 
-// --------------------
-// 2️⃣ CORS Middleware
-// Must be before session and routes
-// --------------------
-app.use(cors({
-  origin: "https://thumblify-frontend-pi.vercel.app", // exact frontend URL
-  credentials: true,                                   // allow cookies
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
-
-// Handle preflight requests globally
-app.options("*", cors());
-
-// --------------------
-// 3️⃣ Body parser
-// --------------------
+// Middleware
 app.use(express.json());
 
-// --------------------
-// 4️⃣ Session setup
-// --------------------
+app.use(cors({
+  origin: [
+    "https://thumblify-frontend-pi.vercel.app",
+    "http://localhost:5173"
+  ],
+  credentials: true
+}));
+
+// ✅ Ensure SESSION_SECRET exists
+const sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret) throw new Error("SESSION_SECRET is not defined in .env");
+
 app.use(session({
   name: "thumblify.sid",
-  secret: process.env.SESSION_SECRET,
+  secret: sessionSecret, // guaranteed string
   resave: false,
   saveUninitialized: false,
-  store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI }),
+  store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI! }),
   cookie: {
     httpOnly: true,
-    secure: true,         // ⚠️ must be HTTPS (Vercel production is HTTPS)
-    sameSite: "none",     // allows cross-site cookies
-    maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
+    secure: true,
+    sameSite: "none",
+    maxAge: 1000 * 60 * 60 * 24 * 7
   }
 }));
 
-// --------------------
-// 5️⃣ Routes
-// --------------------
+// Routes
 app.use("/api/auth", AuthRouter);
 app.use("/api/thumbnail", ThumbnailRouter);
 
-// --------------------
-// 6️⃣ Health check
-// --------------------
+// Health check
 app.get("/", (req, res) => res.send("Backend running"));
 
 export default app;
