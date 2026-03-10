@@ -1,13 +1,14 @@
-import express from "express";
+import { Router } from "express";
 import {
   registerUser,
   loginUser,
   logoutUser,
   verifyUser
-} from "../controllers/AuthController";
-import protect from "../middlewares/auth";
+} from "../controllers/AuthControllers.js"; // match your file name exactly
 
-const router = express.Router();
+import protect from "../middlewares/auth.js"; // match your file name exactly
+
+const router = Router();
 
 // Public routes
 router.post("/register", registerUser);
