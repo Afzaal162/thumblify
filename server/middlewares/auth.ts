@@ -1,14 +1,12 @@
 import { Request, Response, NextFunction } from "express";
 
-interface SessionData {
-  isLoggedIn?: boolean;
-  userId?: string;
-}
+const protect = (req: Request, res: Response, next: NextFunction) => {
+  const session = req.session as any; // cast to any for custom properties
 
-const protect = (req: Request & { session: SessionData }, res: Response, next: NextFunction) => {
-  if (!req.session.isLoggedIn || !req.session.userId) {
+  if (!session.isLoggedIn || !session.userId) {
     return res.status(401).json({ message: "You are not logged in" });
   }
+
   next();
 };
 
