@@ -4,9 +4,8 @@ import {
   loginUser,
   logoutUser,
   verifyUser
-} from "../controllers/AuthControllers.js"; // match your file name exactly
-
-import protect from "../middlewares/auth.js"; // match your file name exactly
+} import { registerUser, loginUser, logoutUser, verifyUser } from "../controllers/AuthControllers";
+import protect from "../middlewares/auth";
 
 const router = Router();
 
