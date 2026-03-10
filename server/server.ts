@@ -16,6 +16,10 @@ connectDB().catch(console.error);
 // Middleware
 app.use(express.json());
 
+// Detect environment
+const isProduction = process.env.NODE_ENV === "production";
+
+// CORS
 app.use(cors({
   origin: [
     "https://thumblify-frontend-pi.vercel.app",
@@ -24,21 +28,22 @@ app.use(cors({
   credentials: true
 }));
 
-// ✅ Ensure SESSION_SECRET exists
+// SESSION_SECRET check
 const sessionSecret = process.env.SESSION_SECRET;
 if (!sessionSecret) throw new Error("SESSION_SECRET is not defined in .env");
 
+// Session config
 app.use(session({
   name: "thumblify.sid",
-  secret: sessionSecret, // guaranteed string
+  secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
   store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI! }),
   cookie: {
     httpOnly: true,
-    secure: true,
-    sameSite: "none",
-    maxAge: 1000 * 60 * 60 * 24 * 7
+    secure: isProduction,         // true only in production (HTTPS)
+    sameSite: isProduction ? "none" : "lax", // allow localhost dev
+    maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
   }
 }));
 
