@@ -26,7 +26,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const verifyUser = async () => {
       try {
-        const res = await api.get("/api/auth/verify");
+        const res = await api.get("/verify");
         setUser(res.data.user);
       } catch {
         setUser(null);
