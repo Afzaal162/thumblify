@@ -3,20 +3,18 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 const Login = () => {
-  const [state, setState] = useState<"login" | "register">("login"); // login or register
-  const { user, login, signUp } = useAuth();
+  const [state, setState] = useState<"login" | "register">("login");
+  const { user, login, signUp, loading } = useAuth();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({ name: "", email: "", password: "" });
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(""); // ✅ for showing login/signup success
+  const [success, setSuccess] = useState("");
 
-  // Redirect if already logged in
   useEffect(() => {
-    if (user) navigate("/"); // will navigate only if user exists
-  }, [user, navigate]);
+    if (!loading && user) navigate("/"); // redirect only after verify
+  }, [user, loading, navigate]);
 
-  // Reset form when switching between login and register
   useEffect(() => {
     setFormData({ name: "", email: "", password: "" });
     setError("");
@@ -30,23 +28,22 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(""); // clear previous error
-    setSuccess(""); // clear previous success
+    setError("");
+    setSuccess("");
     try {
+      let currentUser;
       if (state === "login") {
-        const loggedInUser = await login(formData);
-        setSuccess(`Logged in as ${loggedInUser.name}`); // ✅ show success
-        setTimeout(() => navigate("/"), 800); // slight delay to show alert
+        currentUser = await login(formData);
       } else {
-        const registeredUser = await signUp(formData);
-        setSuccess(`Registered as ${registeredUser.name}`); // ✅ show success
-        setTimeout(() => navigate("/"), 800);
+        currentUser = await signUp(formData);
       }
+      setSuccess(`Welcome, ${currentUser.name}`);
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || "Something went wrong");
-      console.error("Auth error:", err);
     }
   };
+
+  if (loading) return <p className="text-center mt-10">Loading...</p>; // optional loading
 
   return (
     <div className="min-h-screen flex items-center justify-center">
@@ -93,7 +90,7 @@ const Login = () => {
         />
 
         {error && <p className="text-red-500 mt-2">{error}</p>}
-        {success && <p className="text-green-400 mt-2">{success}</p>} {/* ✅ show success */}
+        {success && <p className="text-green-400 mt-2">{success}</p>}
 
         <button
           type="submit"
@@ -106,7 +103,7 @@ const Login = () => {
           onClick={() => setState(state === "login" ? "register" : "login")}
           className="text-gray-400 text-sm mt-3 mb-11 cursor-pointer"
         >
-          {state === "login" ? "Don't have an account?" : "Already have an account?"} 
+          {state === "login" ? "Don't have an account?" : "Already have an account?"}
           <span className="text-indigo-400 hover:underline ml-1">click here</span>
         </p>
       </form>
