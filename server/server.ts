@@ -10,48 +10,52 @@ import ThumbnailRouter from "./routes/ThumbnailRoutes.js";
 
 const app = express();
 
-// Connect MongoDB
+// Connect to MongoDB
 connectDB().catch(console.error);
 
-// Middleware
+// Parse JSON
 app.use(express.json());
 
-// Detect environment
-const isProduction = process.env.NODE_ENV === "production";
+// ===== CORS =====
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://thumblify-frontend-pi.vercel.app"
+];
 
-// CORS
 app.use(cors({
-  origin: [
-    "https://thumblify-frontend-pi.vercel.app",
-    "http://localhost:5173"
-  ],
-  credentials: true
+  origin: function(origin, callback) {
+    if (!origin) return callback(null, true); // allow non-browser tools like Postman
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = `CORS policy: origin ${origin} not allowed`;
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true,
 }));
 
-// SESSION_SECRET check
-const sessionSecret = process.env.SESSION_SECRET;
-if (!sessionSecret) throw new Error("SESSION_SECRET is not defined in .env");
-
-// Session config
+// ===== Sessions =====
+app.set("trust proxy", 1); // trust first proxy if behind Vercel / Cloudflare
 app.use(session({
   name: "thumblify.sid",
-  secret: sessionSecret,
+  secret: process.env.SESSION_SECRET as string,
   resave: false,
   saveUninitialized: false,
-  store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI! }),
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGODB_URI as string,
+  }),
   cookie: {
     httpOnly: true,
-    secure: isProduction,         // true only in production (HTTPS)
-    sameSite: isProduction ? "none" : "lax", // allow localhost dev
-    maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
-  }
+    secure: process.env.NODE_ENV === "production", // true on Vercel, false locally
+    sameSite: "none", // required for cross-site cookies
+    maxAge: 1000 * 60 * 60 * 24 * 7,
+  },
 }));
 
-// Routes
+// ===== Routes =====
 app.use("/api/auth", AuthRouter);
 app.use("/api/thumbnail", ThumbnailRouter);
 
-// Health check
 app.get("/", (req, res) => res.send("Backend running"));
 
 export default app;
