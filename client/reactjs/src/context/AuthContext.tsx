@@ -1,80 +1,66 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import axios from "axios";
 
-// Axios instance pointing to your live backend
-const api = axios.create({
-  baseURL: "https://thumblify-server-smoky.vercel.app",
-  withCredentials: true // crucial for session cookies
-});
-
-interface AuthContextType {
-  user: any | null;
-  login: (data: { email: string; password: string }) => Promise<any>;
-  signUp: (data: { name: string; email: string; password: string }) => Promise<any>;
-  logout: () => Promise<void>;
+interface User {
+  _id: string;
+  name: string;
+  email: string;
 }
 
-const AuthContext = createContext<AuthContextType>({} as AuthContextType);
+interface AuthContextType {
+  user: User | null;
+  login: (data: { email: string; password: string }) => Promise<User>;
+  signUp: (data: { name: string; email: string; password: string }) => Promise<User>;
+  logout: () => Promise<void>;
+  loading: boolean;
+}
 
-export const useAuth = () => useContext(AuthContext);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<any | null>(null);
-  const [loading, setLoading] = useState(true); // to track initial verification
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Verify user on initial load
+  // Verify session on app load
+  const verifyUser = async () => {
+    try {
+      const res = await axios.get("/api/auth/verify", { withCredentials: true });
+      setUser(res.data.user);
+    } catch (err) {
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const verifyUser = async () => {
-      try {
-        const res = await api.get("/api/auth/verify");
-        setUser(res.data.user);
-      } catch {
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
     verifyUser();
   }, []);
 
-  // Login function
-  const login = async ({ email, password }: { email: string; password: string }) => {
-    try {
-      const res = await api.post("/api/auth/login", { email, password });
-      setUser(res.data.user);
-      return res.data.user;
-    } catch (err: any) {
-      throw new Error(err.response?.data?.message || "Login failed");
-    }
+  const login = async (formData: { email: string; password: string }) => {
+    await axios.post("/api/auth/login", formData, { withCredentials: true });
+    return verifyUser().then(() => user!); // ensure user is updated
   };
 
-  // Sign up function
-  const signUp = async ({ name, email, password }: { name: string; email: string; password: string }) => {
-    try {
-      const res = await api.post("/api/auth/register", { name, email, password });
-      setUser(res.data.user);
-      return res.data.user;
-    } catch (err: any) {
-      throw new Error(err.response?.data?.message || "Registration failed");
-    }
+  const signUp = async (formData: { name: string; email: string; password: string }) => {
+    await axios.post("/api/auth/register", formData, { withCredentials: true });
+    return verifyUser().then(() => user!);
   };
 
-  // Logout function
   const logout = async () => {
-    try {
-      await api.post("/api/auth/logout");
-      setUser(null);
-    } catch (err: any) {
-      console.error("Logout failed", err);
-    }
+    await axios.post("/api/auth/logout", {}, { withCredentials: true });
+    setUser(null);
   };
-
-  // Optional: prevent rendering children until verification is done
-  if (loading) return <div>Loading...</div>;
 
   return (
-    <AuthContext.Provider value={{ user, login, signUp, logout }}>
+    <AuthContext.Provider value={{ user, login, signUp, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("useAuth must be used within AuthProvider");
+  return context;
 };
