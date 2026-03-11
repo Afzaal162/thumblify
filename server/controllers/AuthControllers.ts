@@ -65,9 +65,22 @@ export const logoutUser = async (req: Request, res: Response) => {
 };
 
 // ===== VERIFY =====
-export const verifyUser = (req: Request, res: Response) => {
-  const session = req.session as any;
-  if (!session.user) return res.status(401).json({ message: "Not Authenticated" });
+export const verifyUser = async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.session;
 
-  return res.json({ user: session.user });
+    if (!userId) {
+      return res.status(401).json({ message: 'Not Authenticated' });
+    }
+
+    const user = await User.findById(userId).select('-password');
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid User' });
+    }
+
+    return res.json({ user });
+  } catch (error: any) {
+    console.log(error);
+    return res.status(500).json({ message: error.message });
+  }
 };
