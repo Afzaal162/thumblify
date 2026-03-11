@@ -10,46 +10,44 @@ import ThumbnailRouter from "./routes/ThumbnailRoutes.js";
 
 const app = express();
 
-// Connect to MongoDB
+// ===== Connect to MongoDB =====
 connectDB().catch(console.error);
 
-// Parse JSON
-app.use(express.json());
-
-// ===== CORS =====
+// ===== CORS Setup =====
 const allowedOrigins = [
   "http://localhost:5173",
   "https://thumblify-frontend-pi.vercel.app"
 ];
 
 app.use(cors({
-  origin: function(origin, callback) {
-    if (!origin) return callback(null, true); // allow non-browser tools like Postman
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = `CORS policy: origin ${origin} not allowed`;
-      return callback(new Error(msg), false);
-    }
-    return callback(null, true);
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // allow curl, Postman, mobile apps
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error("CORS not allowed by server"));
   },
-  credentials: true,
+  credentials: true, // important for cookies
 }));
 
-// ===== Sessions =====
-app.set("trust proxy", 1); // trust first proxy if behind Vercel / Cloudflare
+// ===== JSON Parser =====
+app.use(express.json());
+
+// ===== Session Setup =====
+app.set("trust proxy", 1); // needed for Vercel / HTTPS
+
 app.use(session({
   name: "thumblify.sid",
   secret: process.env.SESSION_SECRET as string,
   resave: false,
   saveUninitialized: false,
   store: MongoStore.create({
-    mongoUrl: process.env.MONGODB_URI as string,
+    mongoUrl: process.env.MONGODB_URI as string
   }),
   cookie: {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production", // true on Vercel, false locally
-    sameSite: "none", // required for cross-site cookies
-    maxAge: 1000 * 60 * 60 * 24 * 7,
-  },
+    secure: true, // must be true on HTTPS
+    sameSite: "none",
+    maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
+  }
 }));
 
 // ===== Routes =====
